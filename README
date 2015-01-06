@@ -1,0 +1,24 @@
+A curses program to display weather downloaded from the Met Office DataPoint
+service.  To request this data an API key is required, available by registering at
+https://register.metoffice.gov.uk/WaveRegistrationClient/public/register.do?service=datapoint
+
+The API key and required forecast location should be specified in ~/.metweatherrc
+The location must be one for which the met office provides forecasts.
+The default location to store the latest forecast is ~/.metweather
+An example configuration file:
+
+[default]
+location = Northolt
+api_key = 01234567-89ab-cdef-0123-456789abcdef
+datadir=~/.metweather
+
+Python 2.7 is required.
+
+To install:
+sudo easy_install PyMetWeather-0.1-py2.7.egg
+
+The program can then be run by:
+metweather
+
+Help can be found by
+metweather --help
