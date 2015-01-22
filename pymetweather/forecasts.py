@@ -1,12 +1,12 @@
 import json
 import threading
-from urllib2 import urlopen, URLError
+import requests
 from datetime import timedelta, datetime
 import pytz
 
-base_url = "http://datapoint.metoffice.gov.uk/public/data"
-main_url = base_url + "/val/wxfcs/all/json"
-txt_url = base_url + "/txt/wxfcs/regionalforecast/json"
+base_url = "http://datapoint.metoffice.gov.uk/public/data/"
+main_url = base_url + "val/wxfcs/all/json/"
+text_url = base_url + "txt/wxfcs/regionalforecast/json/"
 
 uktz = pytz.timezone('Europe/London')
 
@@ -38,14 +38,6 @@ class WeatherThread(threading.Thread):
         self.forecast_function()
 
 
-def get_json(url):
-    try:
-        url = urlopen(url)
-        return json.loads(url.read())
-    except (URLError, ValueError):
-        raise ConnectionError("Error retrieving data from {}".format(url))
-
-
 class Forecast(object):
     def __init__(self, datafile, weather):
         self.datafile = datafile
@@ -65,7 +57,7 @@ class Forecast(object):
     def update(self):
         print 'getting forecast {}'.format(self.__class__.__name__)
         try:
-            self.data = get_json(self.data_url())
+            self.data = self.get_data()
             self.set_forecast()
             self.write()
         except ConnectionError:
@@ -112,40 +104,34 @@ class Forecast(object):
             return None
 
 
-class ThreeHourForecast(Forecast):
-    updatedelta = timedelta(minutes=90)
-
-    def data_url(self):
-        return '{}/{}?res=3hourly&key={}'.format(
-            main_url, self.weather.site_id, self.weather.api_key)
-
-    def get_update_time_data(self):
-        return get_json('{}/capabilities?res=3hourly&key={}'.format(
-            main_url, self.weather.api_key))['Resource']['dataDate']
-
-
 class DailyForecast(Forecast):
     updatedelta = timedelta(minutes=90)
+    res = 'daily'
 
-    def data_url(self):
-        return '{}/{}?res=daily&key={}'.format(
-            main_url, self.weather.site_id, self.weather.api_key)
+    def get_data(self):
+        return self.weather.session.get(
+            main_url + self.weather.site_id, params={'res': self.res}).json()
 
     def get_update_time_data(self):
-        return get_json('{}/capabilities?res=daily&key={}'.format(
-            main_url, self.weather.api_key))['Resource']['dataDate']
+        response = self.weather.session.get(
+            main_url + 'capabilities', params={'res': self.res})
+        return response.json()['Resource']['dataDate']
+
+
+class ThreeHourForecast(DailyForecast):
+    res = '3hourly'
 
 
 class RegionalForecast(Forecast):
     updatedelta = timedelta(hours=12)
 
-    def data_url(self):
-        return '{}/{}?key={}'.format(
-            txt_url, self.weather.region, self.weather.api_key)
+    def get_data(self):
+        return self.weather.session.get(text_url + self.weather.region).json()
 
     def get_update_time_data(self):
-        return get_json('{}/capabilities?key={}'.format(
-            txt_url, self.weather.api_key))['RegionalFcst']['issuedAt']
+        response = self.weather.session.get(
+            '/'.join([text_url, 'capabilities']))
+        return response.json()['RegionalFcst']['issuedAt']
 
     def set_forecast(self):
         self.forecast = self.data['RegionalFcst']['FcstPeriods']['Period']
@@ -170,6 +156,9 @@ class WeatherForecast(object):
         self.site_name = site_name
         self.site_id = None
 
+        self.session = requests.Session()
+        self.session.params = {'key': self.api_key}
+
     def load_site_id_and_region(self):
         try:
             with open(self.site_file) as f:
@@ -185,10 +174,10 @@ class WeatherForecast(object):
     def get_site_id_and_region(self):
         print "Getting site information for {}...".format(self.site_name)
 
-        sites = get_json('{}/sitelist?key={}'.format(
-            main_url, self.api_key))['Locations']['Location']
-        regions = get_json('{}/sitelist?key={}'.format(
-            txt_url, self.api_key))['Locations']['Location']
+        sites = self.session.get(
+            main_url + 'sitelist').json()['Locations']['Location']
+        regions = self.session.get(
+            text_url + 'sitelist').json()['Locations']['Location']
 
         site_id = [l for l in sites if l['name'] == self.site_name]
         assert len(site_id) == 1, 'Site {} not found'.format(self.site_name)
