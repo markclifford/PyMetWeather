@@ -1,28 +1,21 @@
 import json
-from datetime import timedelta, datetime
 
 import dpath
-import pytz
 from requests_futures.sessions import FuturesSession
+import pendulum
 
-base_url = "http://datapoint.metoffice.gov.uk/public/data/"
-main_url = base_url + "val/wxfcs/all/json/"
-text_url = base_url + "txt/wxfcs/regionalforecast/json/"
-
-uktz = pytz.timezone('Europe/London')
+BASE_URL = "http://datapoint.metoffice.gov.uk/public/data/"
+MAIN_URL = BASE_URL + "val/wxfcs/all/json/"
+TEXT_URL = BASE_URL + "txt/wxfcs/regionalforecast/json/"
+TIMEZONE = 'Europe/London'
 
 
 def get_time(time_string):
-    if time_string.endswith('Z'):
-        t = datetime.strptime(time_string, '%Y-%m-%dT%H:%M:%SZ')
-        return t.replace(tzinfo=pytz.utc)
-    else:
-        t = datetime.strptime(time_string, '%Y-%m-%dT%H:%M:%S')
-        return pytz.utc.normalize(uktz.localize(t))
+    return pendulum.parse(time_string, tz=TIMEZONE)
 
 
 def get_date(date_string):
-    return datetime.strptime(date_string, '%Y-%m-%dZ').replace(tzinfo=pytz.utc)
+    return pendulum.parse(date_string.strip('Z'), tz='UTC')
 
 
 class ConnectionError(Exception):
@@ -46,14 +39,15 @@ class Forecast(object):
             self.needs_update = True
 
     def start_update(self):
-        print 'getting forecast {}'.format(self.__class__.__name__)
+        print('getting forecast {}'.format(type(self).__name__))
         self.future = self.get_data()
 
     def complete_update(self):
         try:
             self.data = self.future.result().json()
+            print('Updated forecast {}'.format(type(self).__name__))
         except ConnectionError:
-            print 'Could not update {}'.format(self.__class__.__name__)
+            print('Could not update {}'.format(type(self).__name__))
             self.status = False
         else:
             self.set_forecast()
@@ -72,10 +66,9 @@ class Forecast(object):
 
         if self.needs_update:
             return True
-        age = datetime.utcnow().replace(tzinfo=pytz.utc) - self.time()
+        age = (pendulum.now() - self.time()).as_interval()
         if age > self.updatedelta:
-            print 'check for updates required {}'.format(
-                self.__class__.__name__)
+            print('check for updates required {}'.format(type(self).__name__))
             self.update_future = self.get_update_time()
 
     def complete_check_for_updates(self):
@@ -85,8 +78,8 @@ class Forecast(object):
         result = self.update_future.result().json()
         new_time = get_time(dpath.get(result, self.update_time_path))
         if new_time > self.time():
-            print 'update available {}'.format(self.__class__.__name__)
-            print new_time, self.time()
+            print('update available {}'.format(type(self).__name__))
+            print(new_time, self.time())
             self.needs_update = True
 
     def set_forecast(self):
@@ -97,27 +90,26 @@ class Forecast(object):
             json.dump(self.data, f)
 
     def get_update_time(self):
-        print 'getting update time {}'.format(self.__class__.__name__)
+        print('getting update time {}'.format(type(self).__name__))
         try:
             return self.get_update_time_data()
         except ConnectionError:
-            print 'Could not get update time {}'.format(
-                self.__class__.__name__)
+            print('Could not get update time {}'.format(type(self).__name__))
             return None
 
 
 class DailyForecast(Forecast):
     res = 'daily'
-    updatedelta = timedelta(minutes=90)
+    updatedelta = pendulum.Interval(minutes=90)
     update_time_path = 'Resource/dataDate'
 
     def get_data(self):
         return self.weather.session.get(
-            main_url + self.weather.site_id, params={'res': self.res})
+            MAIN_URL + self.weather.site_id, params={'res': self.res})
 
     def get_update_time_data(self):
         return self.weather.session.get(
-                main_url + 'capabilities', params={'res': self.res})
+                MAIN_URL + 'capabilities', params={'res': self.res})
 
 
 class ThreeHourForecast(DailyForecast):
@@ -125,14 +117,14 @@ class ThreeHourForecast(DailyForecast):
 
 
 class RegionalForecast(Forecast):
-    updatedelta = timedelta(hours=12)
+    updatedelta = pendulum.Interval(hours=12)
     update_time_path = 'RegionalFcst/issuedAt'
 
     def get_data(self):
-        return self.weather.session.get(text_url + self.weather.region)
+        return self.weather.session.get(TEXT_URL + self.weather.region)
 
     def get_update_time_data(self):
-        return self.weather.session.get('/'.join([text_url, 'capabilities']))
+        return self.weather.session.get('/'.join([TEXT_URL, 'capabilities']))
 
     def set_forecast(self):
         self.forecast = self.data['RegionalFcst']['FcstPeriods']['Period']
@@ -147,7 +139,7 @@ class RegionalForecast(Forecast):
 
 
 class WeatherForecast(object):
-    #codes_file = resource_filename('pymetweather', 'codes.json')
+    # codes_file = resource_filename('pymetweather', 'codes.json')
 
     def __init__(self, api_key, site_name, datadir):
         self.datadir = datadir
@@ -173,10 +165,10 @@ class WeatherForecast(object):
             self.get_site_id_and_region()
 
     def get_site_id_and_region(self):
-        print "Getting site information for {}...".format(self.site_name)
+        print("Getting site information for {}...".format(self.site_name))
 
-        sites_future = self.session.get(main_url + 'sitelist')
-        regions_future = self.session.get(text_url + 'sitelist')
+        sites_future = self.session.get(MAIN_URL + 'sitelist')
+        regions_future = self.session.get(TEXT_URL + 'sitelist')
 
         sites = sites_future.result().json()['Locations']['Location']
         regions = regions_future.result().json()['Locations']['Location']
@@ -240,8 +232,9 @@ class WeatherForecast(object):
         for period in self.hourly_fcs['Period']:
             day = get_date(period['value'])
             for rep in period['Rep']:
-                rep['$'] = uktz.normalize(
-                    day + timedelta(minutes=int(rep['$']))).hour
+                rep['$'] = (
+                        day + pendulum.Interval(minutes=int(rep['$']))
+                ).in_tz(TIMEZONE).hour
                 rep['W'] = weather_types[rep['W']].split('(')[0]
                 rep['V'] = visibility_types[rep['V']]
 
@@ -249,7 +242,7 @@ class WeatherForecast(object):
                 rep['G'] = '({})'.format(rep['G']).rjust(4)
 
         for period in self.daily_fcs['Period']:
-            period['value'] = get_date(period['value']).strftime('%A') + ':'
+            period['value'] = get_date(period['value']).format('%A:')
             for rep in period['Rep']:
                 rep['W'] = weather_types[rep['W']].split('(')[0]
                 rep['V'] = visibility_types[rep['V']]

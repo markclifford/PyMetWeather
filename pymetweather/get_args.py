@@ -1,5 +1,5 @@
 import argparse
-from ConfigParser import RawConfigParser
+from configparser import RawConfigParser
 import os
 from os.path import expanduser
 from pkg_resources import resource_filename
@@ -30,8 +30,8 @@ def get_config_args():
         args = cp.defaults()
 
     if not args['api_key']:
-        #raise Exception("No API key given")
-        raw_input(
+        # raise Exception("No API key given")
+        input(
             'No API key found, Press any key to proceed with example data')
         args['datadir'] = resource_filename('pymetweather', 'example-data')
         args['dont_update'] = True

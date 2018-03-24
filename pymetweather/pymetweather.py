@@ -5,7 +5,7 @@ from textwrap import fill
 from datetime import date, timedelta
 from pkg_resources import resource_filename
 
-from forecasts import WeatherForecast
+from pymetweather.forecasts import WeatherForecast
 
 locale.setlocale(locale.LC_ALL, "")
 
@@ -180,8 +180,8 @@ class WeatherPrinter(object):
         day = date.today() + timedelta(n_day)
         period = self.fcs.hourly_fcs['Period'][n_day]
         if period['value'] != day.strftime('%Y-%m-%dZ'):
-            print period['value']
-            print day.strftime('%Y-%m-%dZ')
+            print(period['value'])
+            print(day.strftime('%Y-%m-%dZ'))
             raise
 
         self.print_hourly_top(n_day, day)
@@ -337,7 +337,7 @@ class WeatherApp(object):
             self.print_resize()
             return
 
-        with open('/tmp/log', 'aw') as f:
+        with open('/tmp/log', 'a') as f:
             f.write('{}\t{}\t{}\t{}\t{}\t{}\n'.format(
                 self.maxy, self.y, self.scrolly,
                 self.maxx, self.x, self.scrollx))
