@@ -16,11 +16,11 @@ class WeatherPrinter(object):
         self.cols = [
             (['Time'], 5, '{$:02}:00'),
             (['Conditions'], 22, '{W}'),
-            (['Precipitation', 'probability'], 15, '{Pp:>3}\u2009%'),
-            (['Temperature', '(Feels Like)'], 14, '{T:>2} {F}\u2009\u00b0C'),
-            (['Wind Speed', '(Gust)'], 16, '{S:>2} {G}\u2009mph'),
+            (['Precipitation', 'probability'], 15, '{Pp:>3} %'),
+            (['Temperature', '(Feels Like)'], 14, '{T:>2} {F} °C'),
+            (['Wind Speed', '(Gust)'], 16, '{S:>2} {G} mph'),
             (['Wind', 'Direction'], 12, '{D:>3}'),
-            (['Relative', 'Humidity'], 10, '{H}\u2009%'),
+            (['Relative', 'Humidity'], 10, '{H} %'),
             (['Visibility'], 12, '{V}'),
             (['UV', 'Index'], 7, '{U}')]
 
@@ -28,13 +28,13 @@ class WeatherPrinter(object):
             (['Day'], 13, '{$}', '{$}'),
             (['Conditions'], 22, '{W}', '{W}'),
             (['Precipitation', 'probability'], 15,
-             '{PPd:>3}\u2009%', '{PPn:>3}\u2009%'),
+             '{PPd:>3} %', '{PPn:>3} %'),
             (['Max day/', 'Min night', 'Temperature', '(Feels like)'], 14,
-             '{Dm:>2} {FDm}\u2009\u00b0C', '{Nm:>2} {FNm}\u2009\u00b0C'),
+             '{Dm:>2} {FDm} °C', '{Nm:>2} {FNm} °C'),
             (['Wind Speed', '(Gust)'], 16,
-             '{S:>2} {Gn}\u2009mph', '{S:>2} {Gm}\u2009mph'),
+             '{S:>2} {Gn} mph', '{S:>2} {Gm} mph'),
             (['Wind', 'Direction'], 12, '{D:>3}', '{D:>3}'),
-            (['Relative', 'Humidity'], 10, '{Hn}\u2009%', '{Hm}\u2009%'),
+            (['Relative', 'Humidity'], 10, '{Hn} %', '{Hm} %'),
             (['Visibility'], 12, '{V}', '{V}')]
 
         self.top_pad = curses.newpad(2000, 500)
@@ -69,7 +69,7 @@ class WeatherPrinter(object):
                 ('2', 'Weather for 2 days later'),
                 ('3', 'Weather for 3 days later'),
                 ('4', 'Weather for 4 days later'),
-                ('5\u20139', 'UK outlook for the next month'),
+                ('5–9', 'UK outlook for the next month'),
                 ('l', 'UK outlook for the next month'),
                 ('left arrow', 'scroll left'),
                 ('right arrow', 'scroll left'),
@@ -88,7 +88,7 @@ class WeatherPrinter(object):
     def print_bottom_bar(self):
         self.addustr(
             self.bottom_bar, '?: help   q: quit   t: today   '
-            'd: 5 day summary    1\u20134: days 1 to 4   '
+            'd: 5 day summary    1–4: days 1 to 4   '
             'l: longterm'.ljust(499),
             curses.A_REVERSE | curses.A_BOLD)
 
