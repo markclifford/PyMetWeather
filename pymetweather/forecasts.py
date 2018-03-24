@@ -183,8 +183,14 @@ class WeatherForecast(object):
         self.site_name = site_name
         self.site_id = None
 
-        self.session = FuturesSession(max_workers=5)
-        self.session.params = {'key': self.api_key}
+        self._session = None
+
+    @property
+    def session(self):
+        if self._session is None:
+            self._session = FuturesSession(max_workers=5)
+            self._session.params = {'key': self.api_key}
+        return self._session
 
     def load_site_id_and_region(self):
         try:
