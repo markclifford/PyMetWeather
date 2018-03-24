@@ -14,6 +14,6 @@ setup(name='PyMetWeather',
       scripts=['scripts/metweather'],
       package_data={'pymetweather':
                     ['codes.json', 'metweatherrc', 'example-data/*']},
-      install_requires=['pytz'],
+      install_requires=['requests_futures', 'pytz', 'dpath'],
       zip_safe=False
       )
