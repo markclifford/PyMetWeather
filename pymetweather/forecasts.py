@@ -1,8 +1,8 @@
 import json
-import threading
-import requests
 from datetime import timedelta, datetime
+
 import pytz
+from requests_futures.sessions import FutureSession
 
 base_url = "http://datapoint.metoffice.gov.uk/public/data/"
 main_url = base_url + "val/wxfcs/all/json/"
@@ -28,16 +28,6 @@ class ConnectionError(Exception):
     pass
 
 
-class WeatherThread(threading.Thread):
-
-    def __init__(self, forecast_function):
-        threading.Thread.__init__(self)
-        self.forecast_function = forecast_function
-
-    def run(self):
-        self.forecast_function()
-
-
 class Forecast(object):
     def __init__(self, datafile, weather):
         self.datafile = datafile
@@ -54,10 +44,13 @@ class Forecast(object):
         except IOError:
             self.needs_update = True
 
-    def update(self):
+    def start_update(self):
         print 'getting forecast {}'.format(self.__class__.__name__)
+        self.future = self.get_data()
+
+    def complete_update(self):
         try:
-            self.data = self.get_data()
+            self.data = self.future.result().json()
         except ConnectionError:
             print 'Could not update {}'.format(self.__class__.__name__)
             self.status = False
@@ -73,20 +66,26 @@ class Forecast(object):
             if self.forecast['name'] != site_name.upper():
                 self.needs_update = True
 
-    def check_for_updates(self):
+    def start_check_for_updates(self):
+        self.update_future = None
+
+        if self.needs_update:
+            return True
         age = datetime.utcnow().replace(tzinfo=pytz.utc) - self.time()
         if age > self.updatedelta:
             print 'check for updates required {}'.format(
                 self.__class__.__name__)
-            new_time = self.get_update_time()
-            if new_time is None:
-                self.status = False
-                return
-            new_time = get_time(new_time)
-            if new_time > self.time():
-                print 'update available {}'.format(self.__class__.__name__)
-                print new_time, self.time()
-                self.update()
+            self.update_future = self.start_get_update_time()
+
+    def complete_check_for_updates(self):
+        if self.update_future is None:
+            return
+
+        new_time = get_time(self.update_future.resultsenew_time)
+        if new_time > self.time():
+            print 'update available {}'.format(self.__class__.__name__)
+            print new_time, self.time()
+            self.needs_update = True
 
     def set_forecast(self):
         self.forecast = self.data['SiteRep']['DV']['Location']
@@ -106,17 +105,17 @@ class Forecast(object):
 
 
 class DailyForecast(Forecast):
-    updatedelta = timedelta(minutes=90)
     res = 'daily'
+    updatedelta = timedelta(minutes=90)
+    update_time_path = 'Resource/dataDate'
 
     def get_data(self):
         return self.weather.session.get(
-            main_url + self.weather.site_id, params={'res': self.res}).json()
+            main_url + self.weather.site_id, params={'res': self.res})
 
     def get_update_time_data(self):
-        response = self.weather.session.get(
-            main_url + 'capabilities', params={'res': self.res})
-        return response.json()['Resource']['dataDate']
+        return self.weather.session.get(
+                main_url + 'capabilities', params={'res': self.res})
 
 
 class ThreeHourForecast(DailyForecast):
@@ -125,14 +124,13 @@ class ThreeHourForecast(DailyForecast):
 
 class RegionalForecast(Forecast):
     updatedelta = timedelta(hours=12)
+    update_time_path = 'RegionalFcst/issuedAt'
 
     def get_data(self):
-        return self.weather.session.get(text_url + self.weather.region).json()
+        return self.weather.session.get(text_url + self.weather.region)
 
     def get_update_time_data(self):
-        response = self.weather.session.get(
-            '/'.join([text_url, 'capabilities']))
-        return response.json()['RegionalFcst']['issuedAt']
+        return self.weather.session.get('/'.join([text_url, 'capabilities']))
 
     def set_forecast(self):
         self.forecast = self.data['RegionalFcst']['FcstPeriods']['Period']
@@ -157,7 +155,7 @@ class WeatherForecast(object):
         self.site_name = site_name
         self.site_id = None
 
-        self.session = requests.Session()
+        self.session = FutureSession(max_workers=5)
         self.session.params = {'key': self.api_key}
 
     def load_site_id_and_region(self):
@@ -175,10 +173,11 @@ class WeatherForecast(object):
     def get_site_id_and_region(self):
         print "Getting site information for {}...".format(self.site_name)
 
-        sites = self.session.get(
-            main_url + 'sitelist').json()['Locations']['Location']
-        regions = self.session.get(
-            text_url + 'sitelist').json()['Locations']['Location']
+        sites_future = self.session.get(main_url + 'sitelist')
+        regions_future = self.session.get(text_url + 'sitelist')
+
+        sites = sites_future.result().json()['Locations']['Location']
+        regions = regions_future.result().json()['Locations']['Location']
 
         site_id = [l for l in sites if l['name'] == self.site_name]
         assert len(site_id) >= 1, 'Site {} not found'.format(self.site_name)
@@ -221,28 +220,19 @@ class WeatherForecast(object):
         self.forecasts['daily'].check_location(self.site_name)
         self.forecasts['regional'].check_location(self.region_name)
 
-        if any([f.needs_update for f in self.forecasts.values()]):
-            wts = []
-            for f in self.forecasts.values():
-                wts.append(WeatherThread(f.update))
-                wts[-1].start()
-            for wt in wts:
-                wt.join()
-            if not all([f.status for f in self.forecasts.values()]):
-                raise ConnectionError('Could not retreive forecasts')
-            return
+        if not no_updates:
+            for fc in self.forecasts.values():
+                fc.start_check_for_updates()
+            for fc in self.forecasts.values():
+                self.complete_check_for_updates()
 
-        if no_updates:
-            return
-
-        wts = []
-        for f in self.forecasts.values():
-            wts.append(WeatherThread(f.check_for_updates))
-            wts[-1].start()
-        for wt in wts:
-            wt.join()
+        to_update = [fc for fc in self.forecasts.values() if fc.needs_update]
+        for fc in to_update:
+            fc.start_update()
+        for fc in to_update:
+            fc.complete_update()
         if not all([f.status for f in self.forecasts.values()]):
-            print 'Continuing without updates'
+            raise ConnectionError('Could not retreive forecasts')
 
     def process_forecast(self, weather_types, visibility_types):
         for period in self.hourly_fcs['Period']:
