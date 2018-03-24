@@ -14,7 +14,8 @@ TIMEZONE = 'Europe/London'
 logger = logging.getLogger('pymetweather')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
-ch.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+ch.setFormatter(logging.Formatter(
+    '%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
 logger.addHandler(ch)
 
 

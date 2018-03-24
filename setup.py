@@ -1,5 +1,5 @@
-import os
-from setuptools import setup
+import os.path
+from setuptools import setup, find_packages
 
 
 def read(fname):
@@ -11,8 +11,9 @@ setup(name='PyMetWeather',
       description='Text based weather forecast from Met Office data',
       long_description=read('README'),
       author='tracyjacks',
-      packages=['pymetweather'],
-      scripts=['scripts/metweather'],
+      packages=find_packages(),
+      entry_points={'console_scripts': [
+          'metweather = pymetweather.pymetweather:main']},
       package_data={'pymetweather':
                     ['codes.json', 'metweatherrc', 'example-data/*']},
       install_requires=['dpath', 'pendulum', 'requests_futures'],

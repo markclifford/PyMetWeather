@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from pkg_resources import resource_filename
 
 from pymetweather.forecasts import WeatherForecast
+from pymetweather.get_args import get_command_line_args, get_config_args
 
 locale.setlocale(locale.LC_ALL, '')
 
@@ -378,3 +379,9 @@ def run_app(args):
     fcs.load(args['dont_update'])
     fcs.process_forecast(weather_types, visibility_types)
     curses.wrapper(run_curses_app, fcs)
+
+
+def main():
+    args = get_config_args()
+    args.update(get_command_line_args())
+    run_app(args)
