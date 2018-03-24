@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod, abstractproperty
 import logging
 import json
 
@@ -29,9 +30,22 @@ class ConnectionError(Exception):
     pass
 
 
-class Forecast(object):
-    time_path = 'SiteRep/DV/dataDate'
-    forecast_path = 'SiteRep/DV/Location'
+class Forecast(ABC):
+    @abstractproperty
+    def updatedelta():
+        pass
+
+    @abstractproperty
+    def update_time_path():
+        pass
+
+    @abstractproperty
+    def forecast_path():
+        pass
+
+    @abstractproperty
+    def time_path():
+        pass
 
     def __init__(self, datafile, weather):
         self.datafile = datafile
@@ -65,11 +79,6 @@ class Forecast(object):
 
     def time(self):
         return get_time(dpath.get(self.data, self.time_path))
-
-    def check_location(self, site_name):
-        if self.data is not None:
-            if self.forecast['name'] != site_name.upper():
-                self.needs_update = True
 
     def start_check_for_updates(self):
         self.update_future = None
@@ -108,11 +117,25 @@ class Forecast(object):
                 'Could not get update time {}'.format(type(self).__name__))
             return None
 
+    @abstractmethod
+    def check_location(self, site_name):
+        pass
+
+    @abstractmethod
+    def get_update_time_data(self, site_name):
+        pass
+
+    @abstractmethod
+    def get_data(self, site_name):
+        pass
+
 
 class DailyForecast(Forecast):
-    res = 'daily'
     updatedelta = pendulum.Interval(minutes=90)
     update_time_path = 'Resource/dataDate'
+    time_path = 'SiteRep/DV/dataDate'
+    forecast_path = 'SiteRep/DV/Location'
+    res = 'daily'
 
     def get_data(self):
         return self.weather.session.get(
@@ -121,6 +144,11 @@ class DailyForecast(Forecast):
     def get_update_time_data(self):
         return self.weather.session.get(
                 MAIN_URL + 'capabilities', params={'res': self.res})
+
+    def check_location(self, site_name):
+        if self.data is not None:
+            if self.forecast['name'] != site_name.upper():
+                self.needs_update = True
 
 
 class ThreeHourForecast(DailyForecast):
