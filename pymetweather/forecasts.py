@@ -23,6 +23,8 @@ class ConnectionError(Exception):
 
 
 class Forecast(object):
+    time_path = 'SiteRep/DV/dataDate'
+
     def __init__(self, datafile, weather):
         self.datafile = datafile
         self.weather = weather
@@ -54,7 +56,7 @@ class Forecast(object):
             self.write()
 
     def time(self):
-        return get_time(self.data['SiteRep']['DV']['dataDate'])
+        return get_time(dpath.get(self.data, self.time_path))
 
     def check_location(self, site_name):
         if self.data is not None:
@@ -119,6 +121,7 @@ class ThreeHourForecast(DailyForecast):
 class RegionalForecast(Forecast):
     updatedelta = pendulum.Interval(hours=12)
     update_time_path = 'RegionalFcst/issuedAt'
+    time_path = 'RegionalFcst/issuedAt'
 
     def get_data(self):
         return self.weather.session.get(TEXT_URL + self.weather.region)
@@ -129,9 +132,6 @@ class RegionalForecast(Forecast):
     def set_forecast(self):
         self.forecast = self.data['RegionalFcst']['FcstPeriods']['Period']
 
-    def time(self):
-        return get_time(self.data['RegionalFcst']['issuedAt'])
-
     def check_location(self, region):
         if self.data is not None:
             if self.data['RegionalFcst']['regionId'] != region:
@@ -139,7 +139,6 @@ class RegionalForecast(Forecast):
 
 
 class WeatherForecast(object):
-    # codes_file = resource_filename('pymetweather', 'codes.json')
 
     def __init__(self, api_key, site_name, datadir):
         self.datadir = datadir
@@ -238,19 +237,14 @@ class WeatherForecast(object):
                 rep['W'] = weather_types[rep['W']].split('(')[0]
                 rep['V'] = visibility_types[rep['V']]
 
-                rep['F'] = '({})'.format(rep['F']).rjust(4)
-                rep['G'] = '({})'.format(rep['G']).rjust(4)
+                rep['F'] = f"({rep['F']})".rjust(4)
+                rep['G'] = f"({rep['G']})".rjust(4)
 
         for period in self.daily_fcs['Period']:
             period['value'] = get_date(period['value']).format('%A:')
             for rep in period['Rep']:
                 rep['W'] = weather_types[rep['W']].split('(')[0]
                 rep['V'] = visibility_types[rep['V']]
-                if 'FDm' in rep:
-                    rep['FDm'] = '({})'.format(rep['FDm']).rjust(4)
-                if 'FNm' in rep:
-                    rep['FNm'] = '({})'.format(rep['FNm']).rjust(4)
-                if 'Gm' in rep:
-                    rep['Gm'] = '({})'.format(rep['Gm']).rjust(4)
-                if 'Gn' in rep:
-                    rep['Gn'] = '({})'.format(rep['Gn']).rjust(4)
+                for field in ['FDm', 'FNm', 'Gm', 'Gn']:
+                    if field in rep:
+                        rep[field] = f"({rep[field]})".rjust(4)

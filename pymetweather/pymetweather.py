@@ -7,7 +7,7 @@ from pkg_resources import resource_filename
 
 from pymetweather.forecasts import WeatherForecast
 
-locale.setlocale(locale.LC_ALL, "")
+locale.setlocale(locale.LC_ALL, '')
 
 
 with open(resource_filename('pymetweather', 'codes.json')) as f:
@@ -67,27 +67,27 @@ class WeatherPrinter(object):
             self.tab_maxx = self.help_maxx
 
     def setup_help(self):
-        help = [("q", "Quit"),
-                ("?", "Show this help"),
-                ("t", "Today's weather"),
-                ("d", "Five day summary"),
-                ("0", "Today's weather"),
-                ("1", "Tomorrow's weather"),
-                ("2", "Weather for 2 days later"),
-                ("3", "Weather for 3 days later"),
-                ("4", "Weather for 4 days later"),
-                (u"5\u20139", "UK outlook for the next month"),
-                (u"l", "UK outlook for the next month"),
-                (u"left arrow", "scroll left"),
-                (u"right arrow", "scroll left"),
-                (u"up arrow", "scroll up"),
-                (u"down arrow", "scroll down")]
+        help = [('q', 'Quit'),
+                ('?', 'Show this help'),
+                ('t', "Today's weather"),
+                ('d', 'Five day summary'),
+                ('0', "Today's weather"),
+                ('1', "Tomorrow's weather"),
+                ('2', 'Weather for 2 days later'),
+                ('3', 'Weather for 3 days later'),
+                ('4', 'Weather for 4 days later'),
+                (u'5\u20139', 'UK outlook for the next month'),
+                (u'l', 'UK outlook for the next month'),
+                (u'left arrow', 'scroll left'),
+                (u'right arrow', 'scroll left'),
+                (u'up arrow', 'scroll up'),
+                (u'down arrow', 'scroll down')]
         c1width = max([len(k[0]) for k in help])
         c2width = max([len(k[1]) for k in help])
 
-        self.help_string = ""
+        self.help_string = ''
         for h in help:
-            self.help_string += h[0].ljust(c1width + 1) + u" : " + h[1] + "\n"
+            self.help_string += h[0].ljust(c1width + 1) + u' : ' + h[1] + '\n'
         self.help_string = self.help_string.strip('\n')
         self.help_maxy = len(help) - 1
         self.help_maxx = c1width + c2width - 1
@@ -123,18 +123,18 @@ class WeatherPrinter(object):
         regfindex = 0
         regf = self.fcs.reg_fcs[0]['Paragraph']
         if n_day == 0:
-            if "Headline" in regf[regfindex]['title']:
+            if 'Headline' in regf[regfindex]['title']:
                 self.addustr(self.top_pad, self.wrap_text(regf[regfindex]['$'])
                              + '\n\n')
                 regfindex += 1
 
-            if "Today" in regf[regfindex]['title']:
+            if 'Today' in regf[regfindex]['title']:
                 today_text = self.wrap_text('Today: ' + regf[regfindex]['$'])
                 self.addustr(self.top_pad, today_text[:7], curses.A_BOLD)
                 self.addustr(self.top_pad, today_text[7:] + '\n\n')
                 regfindex += 1
 
-            if "Tonight" in regf[regfindex]['title']:
+            if 'Tonight' in regf[regfindex]['title']:
                 tonight_text = self.wrap_text(regf[regfindex]['title'] + ' ' +
                                               regf[regfindex]['$'])
                 lent = len(regf[regfindex]['title'])
@@ -350,19 +350,19 @@ class WeatherApp(object):
                 return
             elif c in self.key_map and self.screen_showing != self.key_map[c]:
                 self.print_screen(self.key_map[c])
-            elif c == "KEY_RESIZE":
+            elif c == 'KEY_RESIZE':
                 self.print_resize()
-            elif c == "KEY_DOWN":
+            elif c == 'KEY_DOWN':
                 if self.scrolly + self.y - 1 < self.maxy:
                     self.scrolly += 1
                     self.draw_screen()
-            elif c == "KEY_UP" and self.scrolly != 0:
+            elif c == 'KEY_UP' and self.scrolly != 0:
                 self.scrolly -= 1
                 self.draw_screen()
-            elif c == "KEY_LEFT" and self.scrollx != 0:
+            elif c == 'KEY_LEFT' and self.scrollx != 0:
                 self.scrollx -= 1
                 self.draw_screen()
-            elif c == "KEY_RIGHT":
+            elif c == 'KEY_RIGHT':
                 if self.scrollx + self.x - 1 < self.maxx:
                     self.scrollx += 1
                     self.draw_screen()
