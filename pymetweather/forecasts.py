@@ -1,8 +1,9 @@
 import json
 from datetime import timedelta, datetime
 
+import dpath
 import pytz
-from requests_futures.sessions import FutureSession
+from requests_futures.sessions import FuturesSession
 
 base_url = "http://datapoint.metoffice.gov.uk/public/data/"
 main_url = base_url + "val/wxfcs/all/json/"
@@ -75,13 +76,14 @@ class Forecast(object):
         if age > self.updatedelta:
             print 'check for updates required {}'.format(
                 self.__class__.__name__)
-            self.update_future = self.start_get_update_time()
+            self.update_future = self.get_update_time()
 
     def complete_check_for_updates(self):
         if self.update_future is None:
             return
 
-        new_time = get_time(self.update_future.resultsenew_time)
+        result = self.update_future.result().json()
+        new_time = get_time(dpath.get(result, self.update_time_path))
         if new_time > self.time():
             print 'update available {}'.format(self.__class__.__name__)
             print new_time, self.time()
@@ -155,7 +157,7 @@ class WeatherForecast(object):
         self.site_name = site_name
         self.site_id = None
 
-        self.session = FutureSession(max_workers=5)
+        self.session = FuturesSession(max_workers=5)
         self.session.params = {'key': self.api_key}
 
     def load_site_id_and_region(self):
@@ -224,7 +226,7 @@ class WeatherForecast(object):
             for fc in self.forecasts.values():
                 fc.start_check_for_updates()
             for fc in self.forecasts.values():
-                self.complete_check_for_updates()
+                fc.complete_check_for_updates()
 
         to_update = [fc for fc in self.forecasts.values() if fc.needs_update]
         for fc in to_update:
