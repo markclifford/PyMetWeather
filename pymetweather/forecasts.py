@@ -177,7 +177,7 @@ class WeatherForecast(object):
 
     def __init__(self, api_key, site_name, datadir):
         self.datadir = datadir
-        self.site_file = '{}/met-loc-site-id'.format(datadir)
+        self.site_file = '{}/met-loc-site-id.json'.format(datadir)
 
         self.api_key = api_key
         self.site_name = site_name
@@ -189,14 +189,15 @@ class WeatherForecast(object):
     def load_site_id_and_region(self):
         try:
             with open(self.site_file) as f:
-                name = f.readline().strip(' \n\t')
-                self.site_id = str(int(f.readline().strip(' \n\t')))
-                self.region_name = f.readline().strip(' \n\t')
-                self.region = str(int(f.readline().strip(' \n\t')))
+                data = json.load(f)
+        except IOError:
+            self.get_site_id_and_region()
+        else:
+            name = data['name']
             if name != self.site_name:
                 self.get_site_id_and_region()
-        except (IOError, ValueError):
-            self.get_site_id_and_region()
+            self.site_id = data['id']
+            self.region_name = data['region']
 
     def get_site_id_and_region(self):
         logger.info(
@@ -208,20 +209,27 @@ class WeatherForecast(object):
         sites = sites_future.result().json()['Locations']['Location']
         regions = regions_future.result().json()['Locations']['Location']
 
-        site_id = [l for l in sites if l['name'] == self.site_name]
-        assert len(site_id) >= 1, 'Site {} not found'.format(self.site_name)
+        for site in sites:
+            if site['name'] == self.site_name:
+                self.site_id = site['id']
+                self.region_name = site['region']
+                break
+        else:
+            raise Exception('Site {} not found'.format(self.site_name))
 
-        self.site_id = site_id[0]['id']
-        region = site_id[0]['region']
-
-        region = [r for r in regions if r['@name'] == region]
-        assert len(region) == 1
-        self.region_name = region[0]['@name']
-        self.region = region[0]['@id']
+        for region in regions:
+            if region['@name'] == self.region_name:
+                self.region = region
+                break
+        else:
+            raise Exception('Region {} not found'.format(self.region_name))
 
         with open(self.site_file, 'w') as f:
-            f.write('{}\n{}\n{}\n{}'.format(
-                self.site_name, self.site_id, self.region_name, self.region))
+            json.dump({
+                'name': self.site_name,
+                'id': self.site_id,
+                'region': self.region_name
+                }, f)
 
     def load(self, no_updates=False):
         self.get_data(no_updates)
