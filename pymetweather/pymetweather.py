@@ -179,7 +179,10 @@ class WeatherPrinter(object):
     def print_hourly_weather(self, n_day, top_only=False):
         day = date.today() + timedelta(n_day)
         period = self.fcs.hourly_fcs['Period'][n_day]
-        assert period['value'] == day.strftime('%Y-%m-%dZ')
+        if period['value'] != day.strftime('%Y-%m-%dZ'):
+            print period['value']
+            print day.strftime('%Y-%m-%dZ')
+            raise
 
         self.print_hourly_top(n_day, day)
         if not top_only:
