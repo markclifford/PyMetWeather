@@ -6,6 +6,8 @@ import dpath
 from requests_futures.sessions import FuturesSession
 import pendulum
 
+from pymetweather.codes import WEATHER_TYPES, VISIBILITY_TYPES
+
 BASE_URL = 'http://datapoint.metoffice.gov.uk/public/data/'
 MAIN_URL = BASE_URL + 'val/wxfcs/all/json/'
 TEXT_URL = BASE_URL + 'txt/wxfcs/regionalforecast/json/'
@@ -278,15 +280,15 @@ class WeatherForecast(object):
         if not all([f.status for f in self.forecasts.values()]):
             raise ConnectionError('Could not retreive forecasts')
 
-    def process_forecast(self, weather_types, visibility_types):
+    def process_forecast(self):
         for period in self.hourly_fcs['Period']:
             day = get_date(period['value'])
             for rep in period['Rep']:
                 rep['$'] = (
                         day + pendulum.Interval(minutes=int(rep['$']))
                 ).in_tz(TIMEZONE).hour
-                rep['W'] = weather_types[rep['W']].split('(')[0]
-                rep['V'] = visibility_types[rep['V']]
+                rep['W'] = WEATHER_TYPES[rep['W']].split('(')[0]
+                rep['V'] = VISIBILITY_TYPES[rep['V']]
 
                 rep['F'] = f"({rep['F']})".rjust(4)
                 rep['G'] = f"({rep['G']})".rjust(4)
@@ -294,8 +296,8 @@ class WeatherForecast(object):
         for period in self.daily_fcs['Period']:
             period['value'] = get_date(period['value']).format('%A:')
             for rep in period['Rep']:
-                rep['W'] = weather_types[rep['W']].split('(')[0]
-                rep['V'] = visibility_types[rep['V']]
+                rep['W'] = WEATHER_TYPES[rep['W']].split('(')[0]
+                rep['V'] = VISIBILITY_TYPES[rep['V']]
                 for field in ['FDm', 'FNm', 'Gm', 'Gn']:
                     if field in rep:
                         rep[field] = f"({rep[field]})".rjust(4)

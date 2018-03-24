@@ -1,20 +1,12 @@
 import curses
 import locale
-import json
 from textwrap import fill
 from datetime import date, timedelta
-from pkg_resources import resource_filename
 
 from pymetweather.forecasts import WeatherForecast
 from pymetweather.get_args import get_command_line_args, get_config_args
 
 locale.setlocale(locale.LC_ALL, '')
-
-
-with open(resource_filename('pymetweather', 'codes.json')) as f:
-    codes = json.load(f)
-    weather_types = codes['Codes']['weather-types']
-    visibility_types = codes['Codes']['visibility']
 
 
 class WeatherPrinter(object):
@@ -377,7 +369,7 @@ def run_app(args):
         fcs.load(True)
         return
     fcs.load(args['dont_update'])
-    fcs.process_forecast(weather_types, visibility_types)
+    fcs.process_forecast()
     curses.wrapper(run_curses_app, fcs)
 
 
