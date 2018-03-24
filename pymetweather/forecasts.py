@@ -58,11 +58,12 @@ class Forecast(object):
         print 'getting forecast {}'.format(self.__class__.__name__)
         try:
             self.data = self.get_data()
-            self.set_forecast()
-            self.write()
         except ConnectionError:
             print 'Could not update {}'.format(self.__class__.__name__)
             self.status = False
+        else:
+            self.set_forecast()
+            self.write()
 
     def time(self):
         return get_time(self.data['SiteRep']['DV']['dataDate'])
@@ -180,7 +181,7 @@ class WeatherForecast(object):
             text_url + 'sitelist').json()['Locations']['Location']
 
         site_id = [l for l in sites if l['name'] == self.site_name]
-        assert len(site_id) == 1, 'Site {} not found'.format(self.site_name)
+        assert len(site_id) >= 1, 'Site {} not found'.format(self.site_name)
 
         self.site_id = site_id[0]['id']
         region = site_id[0]['region']
