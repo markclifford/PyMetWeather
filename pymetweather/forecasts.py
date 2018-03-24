@@ -1,13 +1,20 @@
+import logging
 import json
 
 import dpath
 from requests_futures.sessions import FuturesSession
 import pendulum
 
-BASE_URL = "http://datapoint.metoffice.gov.uk/public/data/"
-MAIN_URL = BASE_URL + "val/wxfcs/all/json/"
-TEXT_URL = BASE_URL + "txt/wxfcs/regionalforecast/json/"
+BASE_URL = 'http://datapoint.metoffice.gov.uk/public/data/'
+MAIN_URL = BASE_URL + 'val/wxfcs/all/json/'
+TEXT_URL = BASE_URL + 'txt/wxfcs/regionalforecast/json/'
 TIMEZONE = 'Europe/London'
+
+logger = logging.getLogger('pymetweather')
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+logger.addHandler(ch)
 
 
 def get_time(time_string):
@@ -24,6 +31,7 @@ class ConnectionError(Exception):
 
 class Forecast(object):
     time_path = 'SiteRep/DV/dataDate'
+    forecast_path = 'SiteRep/DV/Location'
 
     def __init__(self, datafile, weather):
         self.datafile = datafile
@@ -41,15 +49,15 @@ class Forecast(object):
             self.needs_update = True
 
     def start_update(self):
-        print('getting forecast {}'.format(type(self).__name__))
+        logger.info('getting forecast {}'.format(type(self).__name__))
         self.future = self.get_data()
 
     def complete_update(self):
         try:
             self.data = self.future.result().json()
-            print('Updated forecast {}'.format(type(self).__name__))
+            logger.info('Updated forecast {}'.format(type(self).__name__))
         except ConnectionError:
-            print('Could not update {}'.format(type(self).__name__))
+            logger.error('Could not update {}'.format(type(self).__name__))
             self.status = False
         else:
             self.set_forecast()
@@ -70,8 +78,9 @@ class Forecast(object):
             return True
         age = (pendulum.now() - self.time()).as_interval()
         if age > self.updatedelta:
-            print('check for updates required {}'.format(type(self).__name__))
-            self.update_future = self.get_update_time()
+            logger.info(
+                'check for updates required {}'.format(type(self).__name__))
+            self.update_future = self.get_update_time_data()
 
     def complete_check_for_updates(self):
         if self.update_future is None:
@@ -80,23 +89,23 @@ class Forecast(object):
         result = self.update_future.result().json()
         new_time = get_time(dpath.get(result, self.update_time_path))
         if new_time > self.time():
-            print('update available {}'.format(type(self).__name__))
-            print(new_time, self.time())
+            logger.info('update available {}'.format(type(self).__name__))
             self.needs_update = True
 
     def set_forecast(self):
-        self.forecast = self.data['SiteRep']['DV']['Location']
+        self.forecast = dpath.get(self.data, self.forecast_path)
 
     def write(self):
         with open(self.datafile, 'w') as f:
             json.dump(self.data, f)
 
     def get_update_time(self):
-        print('getting update time {}'.format(type(self).__name__))
+        logger.info('getting update time {}'.format(type(self).__name__))
         try:
             return self.get_update_time_data()
         except ConnectionError:
-            print('Could not get update time {}'.format(type(self).__name__))
+            logger.error(
+                'Could not get update time {}'.format(type(self).__name__))
             return None
 
 
@@ -122,15 +131,13 @@ class RegionalForecast(Forecast):
     updatedelta = pendulum.Interval(hours=12)
     update_time_path = 'RegionalFcst/issuedAt'
     time_path = 'RegionalFcst/issuedAt'
+    forecast_path = 'RegionalFcst/FcstPeriods/Period'
 
     def get_data(self):
         return self.weather.session.get(TEXT_URL + self.weather.region)
 
     def get_update_time_data(self):
         return self.weather.session.get('/'.join([TEXT_URL, 'capabilities']))
-
-    def set_forecast(self):
-        self.forecast = self.data['RegionalFcst']['FcstPeriods']['Period']
 
     def check_location(self, region):
         if self.data is not None:
@@ -164,7 +171,8 @@ class WeatherForecast(object):
             self.get_site_id_and_region()
 
     def get_site_id_and_region(self):
-        print("Getting site information for {}...".format(self.site_name))
+        logger.info(
+            'Getting site information for {}...'.format(self.site_name))
 
         sites_future = self.session.get(MAIN_URL + 'sitelist')
         regions_future = self.session.get(TEXT_URL + 'sitelist')

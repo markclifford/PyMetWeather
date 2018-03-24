@@ -106,8 +106,8 @@ class WeatherPrinter(object):
         self.addustr(self.top_pad, self.wrap_text(regf1['title']),
                      curses.A_BOLD)
         self.addustr(self.top_pad, '\n' + self.wrap_text(regf1['$']) + '\n\n')
-        self.addustr(self.top_pad, self.wrap_text(regf2['title']),
-                     curses.A_BOLD)
+        self.addustr(
+                self.top_pad, self.wrap_text(regf2['title']), curses.A_BOLD)
         self.addustr(self.top_pad, '\n' + self.wrap_text(regf2['$']))
 
         self.top_maxy = self.top_pad.getyx()[0]
@@ -179,10 +179,7 @@ class WeatherPrinter(object):
     def print_hourly_weather(self, n_day, top_only=False):
         day = date.today() + timedelta(n_day)
         period = self.fcs.hourly_fcs['Period'][n_day]
-        if period['value'] != day.strftime('%Y-%m-%dZ'):
-            print(period['value'])
-            print(day.strftime('%Y-%m-%dZ'))
-            raise
+        assert period['value'] == day.strftime('%Y-%m-%dZ')
 
         self.print_hourly_top(n_day, day)
         if not top_only:
