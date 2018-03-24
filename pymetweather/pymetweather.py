@@ -14,28 +14,28 @@ class WeatherPrinter(object):
         self.fcs = forecast
 
         self.cols = [
-            (['Time'], 5, u'{$:02}:00'),
-            (['Conditions'], 22, u'{W}'),
-            (['Precipitation', 'probability'], 15, u'{Pp:>3}\u2009%'),
-            (['Temperature', '(Feels Like)'], 14, u'{T:>2} {F}\u2009\u00b0C'),
-            (['Wind Speed', '(Gust)'], 16, u'{S:>2} {G}\u2009mph'),
-            (['Wind', 'Direction'], 12, u'{D:>3}'),
-            (['Relative', 'Humidity'], 10, u'{H}\u2009%'),
-            (['Visibility'], 12, u'{V}'),
-            (['UV', 'Index'], 7, u'{U}')]
+            (['Time'], 5, '{$:02}:00'),
+            (['Conditions'], 22, '{W}'),
+            (['Precipitation', 'probability'], 15, '{Pp:>3}\u2009%'),
+            (['Temperature', '(Feels Like)'], 14, '{T:>2} {F}\u2009\u00b0C'),
+            (['Wind Speed', '(Gust)'], 16, '{S:>2} {G}\u2009mph'),
+            (['Wind', 'Direction'], 12, '{D:>3}'),
+            (['Relative', 'Humidity'], 10, '{H}\u2009%'),
+            (['Visibility'], 12, '{V}'),
+            (['UV', 'Index'], 7, '{U}')]
 
         self.daily_cols = [
-            (['Day'], 13, u'{$}', u'{$}'),
-            (['Conditions'], 22, u'{W}', u'{W}'),
+            (['Day'], 13, '{$}', '{$}'),
+            (['Conditions'], 22, '{W}', '{W}'),
             (['Precipitation', 'probability'], 15,
-             u'{PPd:>3}\u2009%', u'{PPn:>3}\u2009%'),
+             '{PPd:>3}\u2009%', '{PPn:>3}\u2009%'),
             (['Max day/', 'Min night', 'Temperature', '(Feels like)'], 14,
-             u'{Dm:>2} {FDm}\u2009\u00b0C', u'{Nm:>2} {FNm}\u2009\u00b0C'),
+             '{Dm:>2} {FDm}\u2009\u00b0C', '{Nm:>2} {FNm}\u2009\u00b0C'),
             (['Wind Speed', '(Gust)'], 16,
-             u'{S:>2} {Gn}\u2009mph', u'{S:>2} {Gm}\u2009mph'),
-            (['Wind', 'Direction'], 12, u'{D:>3}', u'{D:>3}'),
-            (['Relative', 'Humidity'], 10, u'{Hn}\u2009%', u'{Hm}\u2009%'),
-            (['Visibility'], 12, u'{V}', u'{V}')]
+             '{S:>2} {Gn}\u2009mph', '{S:>2} {Gm}\u2009mph'),
+            (['Wind', 'Direction'], 12, '{D:>3}', '{D:>3}'),
+            (['Relative', 'Humidity'], 10, '{Hn}\u2009%', '{Hm}\u2009%'),
+            (['Visibility'], 12, '{V}', '{V}')]
 
         self.top_pad = curses.newpad(2000, 500)
         self.tab_pad = curses.newpad(2000, 500)
@@ -69,27 +69,27 @@ class WeatherPrinter(object):
                 ('2', 'Weather for 2 days later'),
                 ('3', 'Weather for 3 days later'),
                 ('4', 'Weather for 4 days later'),
-                (u'5\u20139', 'UK outlook for the next month'),
-                (u'l', 'UK outlook for the next month'),
-                (u'left arrow', 'scroll left'),
-                (u'right arrow', 'scroll left'),
-                (u'up arrow', 'scroll up'),
-                (u'down arrow', 'scroll down')]
+                ('5\u20139', 'UK outlook for the next month'),
+                ('l', 'UK outlook for the next month'),
+                ('left arrow', 'scroll left'),
+                ('right arrow', 'scroll left'),
+                ('up arrow', 'scroll up'),
+                ('down arrow', 'scroll down')]
         c1width = max([len(k[0]) for k in help])
         c2width = max([len(k[1]) for k in help])
 
         self.help_string = ''
         for h in help:
-            self.help_string += h[0].ljust(c1width + 1) + u' : ' + h[1] + '\n'
+            self.help_string += h[0].ljust(c1width + 1) + ' : ' + h[1] + '\n'
         self.help_string = self.help_string.strip('\n')
         self.help_maxy = len(help) - 1
         self.help_maxx = c1width + c2width - 1
 
     def print_bottom_bar(self):
         self.addustr(
-            self.bottom_bar, u'?: help   q: quit   t: today   '
-            u'd: 5 day summary    1\u20134: days 1 to 4   '
-            u'l: longterm'.ljust(499),
+            self.bottom_bar, '?: help   q: quit   t: today   '
+            'd: 5 day summary    1\u20134: days 1 to 4   '
+            'l: longterm'.ljust(499),
             curses.A_REVERSE | curses.A_BOLD)
 
     def print_longer_term_weather(self):
@@ -153,7 +153,7 @@ class WeatherPrinter(object):
         width_counter = 0
         for c in self.cols:
             for i, head in enumerate(c[0]):
-                head_text = u'{:^{}}'.format(head, c[1])
+                head_text = '{:^{}}'.format(head, c[1])
                 self.tab_pad.move(i, width_counter)
                 self.addustr(self.tab_pad, head_text, curses.A_BOLD)
             width_counter += c[1]
@@ -162,7 +162,7 @@ class WeatherPrinter(object):
         for i, rep in enumerate(period['Rep']):
             width_counter = 0
             for c in self.cols:
-                cell_text = u'{:^{}}'.format(c[2].format(**rep), c[1])
+                cell_text = '{:^{}}'.format(c[2].format(**rep), c[1])
                 self.tab_pad.move(top_row + i, width_counter)
                 self.addustr(self.tab_pad, cell_text)
                 width_counter += c[1]
@@ -184,7 +184,7 @@ class WeatherPrinter(object):
         width_counter = 0
         for c in self.daily_cols:
             for i, head in enumerate(c[0]):
-                head_text = u'{:^{}}'.format(head, c[1])
+                head_text = '{:^{}}'.format(head, c[1])
                 self.tab_pad.move(i, width_counter)
                 self.addustr(self.tab_pad, head_text, curses.A_BOLD)
             width_counter += c[1]
@@ -192,16 +192,16 @@ class WeatherPrinter(object):
                    max([len(c[0]) for c in self.daily_cols]))
         c = self.daily_cols[0]
         for i, rep in enumerate(period):
-            cell_text = u'{:<{}}   '.format(rep['value'], c[1] - 3)
+            cell_text = '{:<{}}   '.format(rep['value'], c[1] - 3)
             self.tab_pad.move(top_row + i * 4, 0)
             self.addustr(self.tab_pad, cell_text)
 
-            cell_text = u'{:>{}}   '.format(c[2].format(**rep['Rep'][0]),
+            cell_text = '{:>{}}   '.format(c[2].format(**rep['Rep'][0]),
                                             c[1] - 3)
             self.tab_pad.move(top_row + i * 4 + 1, 0)
             self.addustr(self.tab_pad, cell_text)
 
-            cell_text = u'{:>{}}   '.format(c[3].format(**rep['Rep'][1]),
+            cell_text = '{:>{}}   '.format(c[3].format(**rep['Rep'][1]),
                                             c[1] - 3)
             self.tab_pad.move(top_row + i * 4 + 2, 0)
             self.addustr(self.tab_pad, cell_text)
@@ -210,11 +210,11 @@ class WeatherPrinter(object):
             rep = rep['Rep']
             width_counter = self.daily_cols[0][1]
             for c in self.daily_cols[1:]:
-                cell_text = u'{:^{}}'.format(c[2].format(**rep[0]), c[1])
+                cell_text = '{:^{}}'.format(c[2].format(**rep[0]), c[1])
                 self.tab_pad.move(top_row + i * 4 + 1, width_counter)
                 self.addustr(self.tab_pad, cell_text)
 
-                cell_text = u'{:^{}}'.format(c[3].format(**rep[1]), c[1])
+                cell_text = '{:^{}}'.format(c[3].format(**rep[1]), c[1])
                 self.tab_pad.move(top_row + i * 4 + 2, width_counter)
                 self.addustr(self.tab_pad, cell_text)
 
