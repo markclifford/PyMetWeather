@@ -103,7 +103,7 @@ class WeatherPrinter(object):
                 self.top_pad, self.wrap_text(regf2['title']), curses.A_BOLD)
         self.addustr(self.top_pad, '\n' + self.wrap_text(regf2['$']))
 
-        self.top_maxy = self.top_pad.getyx()[0]
+        self.top_maxy = self.top_pad.getyx()[0] + 1
 
     def wrap_text(self, text):
         return fill(text, self.screen_width)
@@ -147,7 +147,7 @@ class WeatherPrinter(object):
             lent = len(regf['title']) + 1
             self.addustr(self.top_pad, '\n' + outlook[:lent], curses.A_BOLD)
             self.addustr(self.top_pad, outlook[lent:] + '\n\n')
-        self.top_maxy = self.top_pad.getyx()[0]
+        self.top_maxy = self.top_pad.getyx()[0] + 1
 
     def print_hourly_tab(self, n_day, period):
         width_counter = 0
