@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod, abstractproperty
-import logging
 import json
+import logging
 
 import dpath
 from requests_futures.sessions import FuturesSession

@@ -1,7 +1,7 @@
 import curses
+from datetime import date, timedelta
 import locale
 from textwrap import fill
-from datetime import date, timedelta
 
 from pymetweather.forecasts import WeatherForecast
 from pymetweather.get_args import get_command_line_args, get_config_args
@@ -60,21 +60,23 @@ class WeatherPrinter(object):
             self.tab_maxx = self.help_maxx
 
     def setup_help(self):
-        help = [('q', 'Quit'),
-                ('?', 'Show this help'),
-                ('t', "Today's weather"),
-                ('d', 'Five day summary'),
-                ('0', "Today's weather"),
-                ('1', "Tomorrow's weather"),
-                ('2', 'Weather for 2 days later'),
-                ('3', 'Weather for 3 days later'),
-                ('4', 'Weather for 4 days later'),
-                ('5–9', 'UK outlook for the next month'),
-                ('l', 'UK outlook for the next month'),
-                ('left arrow', 'scroll left'),
-                ('right arrow', 'scroll left'),
-                ('up arrow', 'scroll up'),
-                ('down arrow', 'scroll down')]
+        help = [
+            ('q', 'Quit'),
+            ('?', 'Show this help'),
+            ('t', "Today's weather"),
+            ('d', 'Five day summary'),
+            ('0', "Today's weather"),
+            ('1', "Tomorrow's weather"),
+            ('2', 'Weather for 2 days later'),
+            ('3', 'Weather for 3 days later'),
+            ('4', 'Weather for 4 days later'),
+            ('5–9', 'UK outlook for the next month'),
+            ('l', 'UK outlook for the next month'),
+            ('left arrow', 'scroll left'),
+            ('right arrow', 'scroll left'),
+            ('up arrow', 'scroll up'),
+            ('down arrow', 'scroll down'),
+        ]
         c1width = max([len(k[0]) for k in help])
         c2width = max([len(k[1]) for k in help])
 
@@ -96,11 +98,11 @@ class WeatherPrinter(object):
         regf1 = self.fcs.reg_fcs[2]['Paragraph']
         regf2 = self.fcs.reg_fcs[3]['Paragraph']
 
-        self.addustr(self.top_pad, self.wrap_text(regf1['title']),
-                     curses.A_BOLD)
+        self.addustr(
+            self.top_pad, self.wrap_text(regf1['title']), curses.A_BOLD)
         self.addustr(self.top_pad, '\n' + self.wrap_text(regf1['$']) + '\n\n')
         self.addustr(
-                self.top_pad, self.wrap_text(regf2['title']), curses.A_BOLD)
+            self.top_pad, self.wrap_text(regf2['title']), curses.A_BOLD)
         self.addustr(self.top_pad, '\n' + self.wrap_text(regf2['$']))
 
         self.top_maxy = self.top_pad.getyx()[0] + 1
@@ -138,8 +140,9 @@ class WeatherPrinter(object):
         elif n_day == 1:
             for regfindex in range(len(regf)):
                 if day.strftime('%A') in regf[regfindex]['title']:
-                    self.addustr(self.top_pad,
-                                 self.wrap_text(regf[regfindex]['$']) + '\n\n')
+                    self.addustr(
+                        self.top_pad,
+                        self.wrap_text(regf[regfindex]['$']) + '\n\n')
                     break
         else:
             regf = self.fcs.reg_fcs[1]['Paragraph']
@@ -157,8 +160,8 @@ class WeatherPrinter(object):
                 self.tab_pad.move(i, width_counter)
                 self.addustr(self.tab_pad, head_text, curses.A_BOLD)
             width_counter += c[1]
-        top_row = (self.tab_pad.getyx()[0] +
-                   max([len(c[0]) for c in self.cols]) - 1)
+        top_row = (
+            self.tab_pad.getyx()[0] + max([len(c[0]) for c in self.cols]) - 1)
         for i, rep in enumerate(period['Rep']):
             width_counter = 0
             for c in self.cols:
@@ -188,21 +191,22 @@ class WeatherPrinter(object):
                 self.tab_pad.move(i, width_counter)
                 self.addustr(self.tab_pad, head_text, curses.A_BOLD)
             width_counter += c[1]
-        top_row = (self.tab_pad.getyx()[0] +
-                   max([len(c[0]) for c in self.daily_cols]))
+        top_row = (
+            self.tab_pad.getyx()[0] +
+            max([len(c[0]) for c in self.daily_cols]))
         c = self.daily_cols[0]
         for i, rep in enumerate(period):
             cell_text = '{:<{}}   '.format(rep['value'], c[1] - 3)
             self.tab_pad.move(top_row + i * 4, 0)
             self.addustr(self.tab_pad, cell_text)
 
-            cell_text = '{:>{}}   '.format(c[2].format(**rep['Rep'][0]),
-                                            c[1] - 3)
+            cell_text = '{:>{}}   '.format(
+                c[2].format(**rep['Rep'][0]), c[1] - 3)
             self.tab_pad.move(top_row + i * 4 + 1, 0)
             self.addustr(self.tab_pad, cell_text)
 
-            cell_text = '{:>{}}   '.format(c[3].format(**rep['Rep'][1]),
-                                            c[1] - 3)
+            cell_text = '{:>{}}   '.format(
+                c[3].format(**rep['Rep'][1]), c[1] - 3)
             self.tab_pad.move(top_row + i * 4 + 2, 0)
             self.addustr(self.tab_pad, cell_text)
 
