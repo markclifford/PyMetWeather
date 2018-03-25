@@ -12,6 +12,11 @@ def get_command_line_args():
     ))
 
     parser.add_argument(
+        '-l',
+        '--location',
+        help='location of forecast'
+    )
+    parser.add_argument(
         '-d',
         '--dont-update',
         dest='dont_update',
@@ -32,7 +37,6 @@ def get_command_line_args():
 
 def get_config_args():
     cp = RawConfigParser({
-        'location': 'Heathrow',
         'api_key': '',
         'datadir': os.path.expanduser('~/.metweather')})
 
@@ -49,5 +53,4 @@ def get_config_args():
 
     if not os.path.isdir(args['datadir']):
         mkdir(args['datadir'])
-
     return args

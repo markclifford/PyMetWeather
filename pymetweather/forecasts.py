@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod, abstractproperty
 import json
 import logging
+import re
+import sys
 
 import dpath
 from requests_futures.sessions import FuturesSession
@@ -161,7 +163,7 @@ class Forecast(ABC):
 
 
 class DailyForecast(Forecast):
-    updatedelta = pendulum.Interval(minutes=90)
+    updatedelta = pendulum.Interval(minutes=100)
     update_time_path = 'Resource/dataDate'
     time_path = 'SiteRep/DV/dataDate'
     forecast_path = 'SiteRep/DV/Location'
@@ -241,18 +243,60 @@ class WeatherForecast(object):
             with open(self.site_file) as f:
                 data = json.load(f)
         except IOError:
+            if self.site_name is None:
+                self.site_name = 'London'
             self.get_site_id_and_region()
         else:
-            name = data['name']
-            if name != self.site_name:
+            if (
+                (self.site_name is not None) and
+                (not self.process_name(data['name']).startswith(
+                    self.process_name(self.site_name)))
+            ):
                 self.get_site_id_and_region()
-            self.site_id = data['site_id']
-            self.region_name = data['region_name']
-            self.region_id = data['region_id']
+            else:
+                self.site_name = data['name']
+                self.site_id = data['site_id']
+                self.region_name = data['region_name']
+                self.region_id = data['region_id']
+
+    @staticmethod
+    def get_site_info(site):
+        if 'unitaryAuthArea' not in site:
+            site['unitaryAuthArea'] = ''
+        site['latitude'] = float(site['latitude'])
+        site['longitude'] = float(site['longitude'])
+
+        site['description'] = (
+            '{name} - {unitaryAuthArea} '
+            '{latitude:+.2f}{longitude:+.2f}/'
+        ).format(**site)
+        return site
+
+    @staticmethod
+    def process_name(name):
+        return re.sub(r"[-.()& ]'", '', name.strip().lower())
+
+    def get_matching_sites(self, site_name, site_data):
+        site_name = self.process_name(site_name)
+
+        for site in site_data:
+            site['processed_name'] = self.process_name(site['name'])
+
+        exact_matches = [
+            self.get_site_info(s) for s in site_data
+            if s['processed_name'] == site_name]
+
+        if exact_matches:
+            return exact_matches
+
+        matches = [
+            self.get_site_info(s) for s in site_data
+            if s['processed_name'].startswith(site_name)]
+
+        return sorted(matches, key=lambda x: len(x['processed_name']))
 
     def get_site_id_and_region(self):
-        logger.info(
-            'Getting site information for {}...'.format(self.site_name))
+        logger.info('Searching for sites matching {}'.format(self.site_name))
 
         sites_future = WeatherClient.get(MAIN_URL + 'sitelist')
         regions_future = WeatherClient.get(TEXT_URL + 'sitelist')
@@ -261,13 +305,45 @@ class WeatherForecast(object):
         regions = WeatherClient.get_result(
             regions_future)['Locations']['Location']
 
-        for site in sites:
-            if site['name'] == self.site_name:
-                self.site_id = site['id']
-                self.region_name = site['region']
-                break
+        matches = self.get_matching_sites(self.site_name, sites)
+        if not matches:
+            logger.error('No site matching {} found'.format(self.site_name))
+            sys.exit()
+
+        if len(matches) == 1:
+            site = matches[0]
         else:
-            raise Exception('Site {} not found'.format(self.site_name))
+            more_than_ten = len(matches) <= 10
+            print(
+                'More than {} site{} found:\n'
+                'Please select from below'.format(
+                        1 if more_than_ten else 10,
+                        '' if more_than_ten else 's'))
+            print('\n'.join((
+                f"{i}) {m['description']}"
+                for i, m in enumerate(matches, 1))))
+
+            while True:
+                result = input('Select a site by number (default 1)>')
+                if not result.strip():
+                    result = 1
+                try:
+                    result = int(result)
+                except ValueError:
+                    if result.strip() == 'q':
+                        sys.exit()
+                    continue
+                try:
+                    assert result >= 1
+                    assert result <= min((len(matches), 10))
+                except AssertionError:
+                    continue
+                site = matches[result - 1]
+                break
+
+        self.site_name = site['name']
+        self.site_id = site['id']
+        self.region_name = site['region']
 
         for region in regions:
             if region['@name'] == self.region_name:
