@@ -369,7 +369,6 @@ def run_app(args):
         fcs.load(True)
         return
     fcs.load(args['dont_update'])
-    fcs.process_forecast()
     curses.wrapper(run_curses_app, fcs)
 
 
